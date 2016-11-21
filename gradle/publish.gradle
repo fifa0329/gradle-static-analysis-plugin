@@ -12,39 +12,39 @@ publish {
 
 apply plugin: 'com.novoda.build-properties'
 buildProperties {
-	secrets {
-		file(rootProject.file('secrets.properties'), '''
+    secrets {
+        file(rootProject.file('secrets.properties'), '''
 This file should contain:
 - git.username: the username used to push to the repo
 - git.password: the password used to push to the repo
 		''')
-	}
+    }
 }
 
 apply plugin: 'org.ajoberstar.grgit'
 apply plugin: 'org.ajoberstar.github-pages'
 
 githubPages {
-	commitMessage = "Deploy groovydoc for release $tag"
-	pages {
-		from groovydoc.destinationDir
-		into "docs/${project.version}"
-	}
+    commitMessage = "Deploy groovydoc for release $tag"
+    pages {
+        from groovydoc.destinationDir
+        into "docs/${project.version}"
+    }
 }
 
 prepareGhPages.dependsOn groovydoc
 
 task prepareRelease {
-	description = 'Prepare changelog and tag for release'
+    description = 'Prepare changelog and tag for release'
     group = 'release'
     dependsOn prepareGhPages
     doLast {
-	    String changelog = extractChangelog()
-	    System.properties['org.ajoberstar.grgit.auth.username'] = buildProperties.secrets['git.username'].string
-		System.properties['org.ajoberstar.grgit.auth.password'] = buildProperties.secrets['git.password'].string
+        String changelog = extractChangelog()
+        System.properties['org.ajoberstar.grgit.auth.username'] = buildProperties.secrets['git.username'].string
+        System.properties['org.ajoberstar.grgit.auth.password'] = buildProperties.secrets['git.password'].string
         grgit.tag.add {
-        	name = tag
-        	message = "Release $tag\n\n$changelog"
+            name = tag
+            message = "Release $tag\n\n$changelog"
         }
     }
 }
@@ -60,18 +60,18 @@ String extractChangelog() {
     if (firstChangelog.size() > 0) {
         return firstChangelog[0][1].trim()
     }
-    throw new GradleException("No changelog found for version $project.version")    
+    throw new GradleException("No changelog found for version $project.version")
 }
 
 task publishArtifact {
-	description = "Publish artifact for plugin version: $tag"
+    description = "Publish artifact for plugin version: $tag"
     group = 'release'
     project.afterEvaluate { dependsOn bintrayUpload }
     mustRunAfter prepareRelease
 }
 
 task publishGroovydoc {
-	description = 'Deploy groovydoc for latest tagged version of the plugin'
+    description = 'Deploy groovydoc for latest tagged version of the plugin'
     group = 'release'
     dependsOn publishGhPages
     mustRunAfter publishArtifact
@@ -81,13 +81,13 @@ task publishRelease {
     description = "Publish release for plugin version: $tag"
     group = 'release'
     if (project.hasProperty('dryRun') && project['dryRun'] == 'false') {
-    	dependsOn prepareRelease, publishArtifact, publishGroovydoc
-    	doLast {
-	    	grgit.push {
-				tags = true
-			}
-	    }
+        dependsOn prepareRelease, publishArtifact, publishGroovydoc
+        doLast {
+            grgit.push {
+                tags = true
+            }
+        }
     } else {
-    	dependsOn publishArtifact
+        dependsOn publishArtifact
     }
 }
